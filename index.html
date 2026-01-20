@@ -4,12 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Matcha Study Studio — Flashcards + Todo</title>
+
+  <!-- OCR + PDF + DOCX libs (client-side) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
   <style>
     :root{
       --bg1:#f3fbf4;
       --bg2:#e7f6ea;
       --panel:#ffffffcc;
-      --panel2:#ffffffef;
       --stroke:#cfe6d4;
       --text:#163025;
       --muted:#4b6b5c;
@@ -19,7 +24,6 @@
       --cream:#fff7e6;
       --shadow: 0 18px 55px rgba(16,48,37,.12);
       --shadow2: 0 10px 30px rgba(16,48,37,.10);
-      --radius: 18px;
       --radius2: 22px;
       --danger:#ff6b6b;
       --warn:#f6c34c;
@@ -27,7 +31,6 @@
       --easy:#7a6cff;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
-
     *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     body{
       margin:0;
@@ -39,12 +42,9 @@
       min-height:100vh;
       overflow-x:hidden;
     }
-
-    /* Cute background dots */
     body:before{
       content:"";
-      position:fixed;
-      inset:0;
+      position:fixed; inset:0;
       pointer-events:none;
       opacity:.35;
       background-image:
@@ -52,9 +52,7 @@
         radial-gradient(circle at 70px 80px, rgba(152,198,165,.22) 2px, transparent 2.2px),
         radial-gradient(circle at 120px 35px, rgba(191,230,200,.22) 2px, transparent 2.2px);
       background-size:140px 140px;
-      filter: blur(.2px);
     }
-
     header{
       position:sticky; top:0; z-index:10;
       backdrop-filter: blur(10px);
@@ -65,9 +63,7 @@
       max-width:1200px; margin:0 auto; padding:14px 16px;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-    }
+    .brand{ display:flex; align-items:center; gap:10px; }
     .brand h1{ margin:0; font-size:15px; letter-spacing:.2px; }
     .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
     .right-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
@@ -77,9 +73,7 @@
       display:grid; gap:14px;
       grid-template-columns: 320px 1fr;
     }
-    @media (max-width: 980px){
-      .wrap{ grid-template-columns: 1fr; }
-    }
+    @media (max-width: 980px){ .wrap{ grid-template-columns: 1fr; } }
 
     .panel{
       background: var(--panel);
@@ -98,7 +92,6 @@
       transform: rotate(12deg);
       pointer-events:none;
     }
-
     .panel h2{ margin:0 0 10px; font-size:14px; }
     .muted{ color:var(--muted); font-size:12px; }
     .tiny{ color:var(--muted); font-size:11px; }
@@ -216,15 +209,6 @@
       display:flex; flex-direction:column; justify-content:space-between; gap:12px;
       position:relative; overflow:hidden;
     }
-    .card:before{
-      content:"";
-      position:absolute; left:-30px; bottom:-50px;
-      width:160px; height:160px;
-      background: radial-gradient(circle at 35% 35%, rgba(191,230,200,.65), transparent 60%);
-      transform: rotate(-12deg);
-      opacity:.9;
-      pointer-events:none;
-    }
     .q{ font-size:15px; }
     .a{ font-size:14px; white-space:pre-wrap; }
     .hidden{ display:none !important; }
@@ -235,7 +219,6 @@
     .good  { background: rgba(55,201,138,.18); border-color: rgba(55,201,138,.45); }
     .easy  { background: rgba(122,108,255,.16); border-color: rgba(122,108,255,.4); }
 
-    /* Sidebar cute mascot */
     .mascot{
       display:flex; gap:10px; align-items:center;
       border-radius: 18px;
@@ -257,16 +240,30 @@
       color:var(--muted);
       margin-left:6px;
     }
-
     .two{ display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
     @media (max-width: 720px){ .two{ grid-template-columns: 1fr; } }
+
+    .progress{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      border:1px solid rgba(207,230,212,.95);
+      background: rgba(255,255,255,.6);
+      overflow:hidden;
+    }
+    .bar{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(127,191,141,.85), rgba(191,230,200,.85));
+      border-radius:999px;
+      transition: width .15s ease;
+    }
   </style>
 </head>
 <body>
 <header>
   <div class="topbar">
     <div class="brand">
-      <!-- simple “matcha blob” icon -->
       <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true">
         <defs>
           <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
@@ -280,7 +277,7 @@
         <path d="M28 36c3 3 7 3 10 0" stroke="#163025" stroke-width="2" fill="none" stroke-linecap="round"/>
       </svg>
       <div>
-        <h1>Matcha Study Studio <span class="corner">cozy mode</span></h1>
+        <h1>Matcha Study Studio <span class="corner">OCR + files</span></h1>
         <div class="sub">Classes → Sets → Flashcards + Todo (saved locally)</div>
       </div>
     </div>
@@ -298,7 +295,7 @@
 </header>
 
 <div class="wrap">
-  <!-- Sidebar: Classes & Sets -->
+  <!-- Sidebar -->
   <aside class="panel">
     <div class="mascot">
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -309,7 +306,7 @@
         <path d="M18 25c4-6 15-8 25-4" stroke="#7fbf8d" stroke-width="3" stroke-linecap="round"/>
       </svg>
       <div class="txt">
-        <b>Tip:</b> Make a class folder (ex: “Honors Physics II”), then create sets (ex: “Ch 21 – Gauss’s Law”).
+        <b>Tip:</b> Upload a picture of notes (clear + straight), then “Generate into selected set”.
       </div>
     </div>
 
@@ -332,18 +329,17 @@
     <div class="list" id="setList"></div>
 
     <div class="hr"></div>
-
     <div class="row">
       <span class="pill" id="selectedInfo">No class selected</span>
     </div>
   </aside>
 
-  <!-- Main: Flashcards -->
+  <!-- Flashcards -->
   <main class="panel" id="viewFlash">
     <div class="row" style="justify-content:space-between; gap:12px">
       <div>
         <h2 style="margin-bottom:4px">Flashcards</h2>
-        <div class="muted">Create cards inside a set, then review with spaced repetition.</div>
+        <div class="muted">Upload notes (image/PDF/DOCX/TXT) → text → flashcards → spaced repetition.</div>
       </div>
       <div class="row">
         <span class="pill">Review scope</span>
@@ -376,6 +372,38 @@
 
     <div class="two">
       <section>
+        <h2>Upload notes (image / PDF / DOCX / TXT)</h2>
+        <div class="muted">
+          Best OCR: bright lighting, high contrast, straight photo, minimal blur.
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="row">
+          <button class="btn-sage" id="btnUploadImage">Upload Image(s) → OCR</button>
+          <button class="btn-sage" id="btnUploadPDF">Upload PDF → text</button>
+          <button class="btn-sage" id="btnUploadDoc">Upload DOCX/TXT/MD</button>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="row">
+          <span class="pill">Put extracted text into:</span>
+          <select id="extractMode">
+            <option value="replace">Replace notes box</option>
+            <option value="append">Append to notes box</option>
+          </select>
+          <button id="btnClearExtract" class="smallbtn">Clear status</button>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="progress"><div class="bar" id="progBar"></div></div>
+        <div class="tiny" style="margin-top:6px" id="extractStatus">No upload yet.</div>
+
+        <input class="hidden" id="imgInput" type="file" accept="image/*" multiple />
+        <input class="hidden" id="pdfInput" type="file" accept="application/pdf" />
+        <input class="hidden" id="docInput" type="file" accept=".txt,.md,.docx,text/plain" />
+
+        <div class="hr"></div>
+
         <h2>Create cards from notes</h2>
         <div class="muted">
           One card per line using:
@@ -384,10 +412,7 @@
           <span class="pill mono">Front | Back</span>
         </div>
         <div style="height:8px"></div>
-        <textarea id="notes" placeholder="Example:
-What is Newton's 2nd law? :: F = m a
-Mitochondria - Powerhouse of the cell
-Derivative | Instantaneous rate of change"></textarea>
+        <textarea id="notes" placeholder="Paste or upload notes here..."></textarea>
         <div class="row" style="margin-top:10px">
           <button class="btn-matcha" id="btnGenerate">Generate into selected set</button>
           <button id="btnClearNotes">Clear</button>
@@ -450,7 +475,7 @@ Derivative | Instantaneous rate of change"></textarea>
     </div>
   </main>
 
-  <!-- Main: Todo -->
+  <!-- Todo -->
   <main class="panel hidden" id="viewTodo">
     <div class="row" style="justify-content:space-between; gap:12px">
       <div>
@@ -485,9 +510,9 @@ Derivative | Instantaneous rate of change"></textarea>
 
 <script>
 /* -----------------------------
-   Data model:
+   State model:
    state = {
-     version: 2,
+     version: 3,
      classes: [
        { id, name, createdAt,
          sets: [ { id, name, createdAt, cards:[Card...] } ],
@@ -497,14 +522,9 @@ Derivative | Instantaneous rate of change"></textarea>
      selectedClassId,
      selectedSetId
    }
-
-   Card:
-   { id, front, back, createdAt, updatedAt, due, intervalDays, repetitions, easeFactor, lapses }
 -------------------------------- */
 
-const STORAGE_KEY = "matcha_study_studio_v2";
-const LEGACY_KEY = "sr_flashcards_v1"; // from your earlier version, if present
-
+const STORAGE_KEY = "matcha_study_studio_v3";
 const $ = (id)=>document.getElementById(id);
 const now = ()=>Date.now();
 const dayMs = (d=1)=>d*24*60*60*1000;
@@ -516,13 +536,21 @@ function fmtDate(ts){
   const d = new Date(ts);
   return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
 }
+function escapeHtml(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
 function defaultState(){
   const t = now();
   const firstClassId = uid();
   const firstSetId = uid();
   return {
-    version: 2,
+    version: 3,
     classes: [{
       id: firstClassId,
       name: "My First Class",
@@ -547,19 +575,6 @@ function loadState(){
       const st = JSON.parse(raw);
       if(st && Array.isArray(st.classes)) return st;
     }
-
-    // Migrate legacy flat cards into a default class/set if found
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if(legacy){
-      const legacyCards = JSON.parse(legacy);
-      const st = defaultState();
-      if(Array.isArray(legacyCards) && legacyCards.length){
-        st.classes[0].sets[0].cards = legacyCards.map(c => normalizeCard(c));
-      }
-      saveState(st);
-      return st;
-    }
-
     const st = defaultState();
     saveState(st);
     return st;
@@ -569,7 +584,6 @@ function loadState(){
     return st;
   }
 }
-
 function saveState(st){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
 }
@@ -593,7 +607,7 @@ function normalizeCard(c){
 let state = loadState();
 let currentReview = null; // { classId, setId, cardId }
 
-/* ---------- Helpers to get selected class/set ---------- */
+/* ---------- Selected class/set ---------- */
 function getSelectedClass(){
   return state.classes.find(c => c.id === state.selectedClassId) || null;
 }
@@ -609,9 +623,8 @@ function ensureSelectionValid(){
     return;
   }
   const cls = getSelectedClass();
-  if(!cls){
-    state.selectedClassId = state.classes[0].id;
-  }
+  if(!cls) state.selectedClassId = state.classes[0].id;
+
   const cls2 = getSelectedClass();
   if(!cls2.sets.length){
     const t = now();
@@ -620,12 +633,10 @@ function ensureSelectionValid(){
     state.selectedSetId = sid;
   }
   const set = getSelectedSet();
-  if(!set){
-    state.selectedSetId = cls2.sets[0].id;
-  }
+  if(!set) state.selectedSetId = cls2.sets[0].id;
 }
 
-/* ---------- Notes parsing ---------- */
+/* ---------- Flashcard creation parsing ---------- */
 function makeCard(front, back){
   const t = now();
   return {
@@ -688,11 +699,9 @@ function applySM2(card, grade){
     else if(reps === 2) interval = 6;
     else interval = Math.round(interval * ef);
   }
-
   if(grade === "hard"){
     interval = Math.max(1, Math.round(interval * 0.8));
   }
-
   card.easeFactor = ef;
   card.repetitions = reps;
   card.intervalDays = interval;
@@ -713,7 +722,6 @@ function getScopedCards(){
     if(!cls) return [];
     return cls.sets.flatMap(s => s.cards.map(card => ({ classId:cls.id, setId:s.id, card })));
   }
-  // set
   if(!cls || !set) return [];
   return set.cards.map(card => ({ classId:cls.id, setId:set.id, card }));
 }
@@ -728,63 +736,64 @@ function newScopedCount(){
 }
 
 /* ---------- Rendering ---------- */
+function getClassName(id){
+  const c = state.classes.find(x=>x.id===id);
+  return c ? c.name : "Unknown Class";
+}
+function getSetName(classId, setId){
+  const c = state.classes.find(x=>x.id===classId);
+  const s = c?.sets.find(x=>x.id===setId);
+  return s ? s.name : "Unknown Set";
+}
+
 function renderSidebar(){
-  // Selected info
   const cls = getSelectedClass();
   const set = getSelectedSet();
   $("selectedInfo").textContent = cls ? `Selected: ${cls.name}${set ? " → " + set.name : ""}` : "No class selected";
   $("todoClassName").textContent = cls ? cls.name : "None";
 
-  // Classes list
   const classList = $("classList");
   classList.innerHTML = "";
-  if(!state.classes.length){
-    classList.innerHTML = `<div class="item"><div class="item-meta">No classes yet.</div></div>`;
-  } else {
-    for(const c of state.classes){
-      const isSel = c.id === state.selectedClassId;
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `
-        <div style="flex:1">
-          <div class="item-title">${escapeHtml(c.name)} ${isSel ? "✅" : ""}</div>
-          <div class="item-meta">${c.sets.length} set(s) • ${c.todos.length} todo</div>
-        </div>
-        <div class="item-actions">
-          <button class="smallbtn btn-sage" data-act="select" data-id="${c.id}">Open</button>
-          <button class="smallbtn" data-act="rename" data-id="${c.id}">Rename</button>
-          <button class="smallbtn btn-danger" data-act="delete" data-id="${c.id}">Delete</button>
-        </div>
-      `;
-      classList.appendChild(div);
-    }
+  for(const c of state.classes){
+    const isSel = c.id === state.selectedClassId;
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="flex:1">
+        <div class="item-title">${escapeHtml(c.name)} ${isSel ? "✅" : ""}</div>
+        <div class="item-meta">${c.sets.length} set(s) • ${c.todos.length} todo</div>
+      </div>
+      <div class="item-actions">
+        <button class="smallbtn btn-sage" data-act="select" data-id="${c.id}">Open</button>
+        <button class="smallbtn" data-act="rename" data-id="${c.id}">Rename</button>
+        <button class="smallbtn btn-danger" data-act="delete" data-id="${c.id}">Delete</button>
+      </div>
+    `;
+    classList.appendChild(div);
   }
 
-  // Sets list
   const setList = $("setList");
   setList.innerHTML = "";
   if(!cls){
     setList.innerHTML = `<div class="item"><div class="item-meta">Select a class.</div></div>`;
-  } else if(!cls.sets.length){
-    setList.innerHTML = `<div class="item"><div class="item-meta">No sets yet.</div></div>`;
-  } else {
-    for(const s of cls.sets){
-      const isSel = s.id === state.selectedSetId;
-      const due = s.cards.filter(cd => (cd.due||0) <= now()).length;
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `
-        <div style="flex:1">
-          <div class="item-title">${escapeHtml(s.name)} ${isSel ? "📌" : ""}</div>
-          <div class="item-meta">${s.cards.length} card(s) • ${due} due</div>
-        </div>
-        <div class="item-actions">
-          <button class="smallbtn btn-sage" data-act="selectSet" data-id="${s.id}">Open</button>
-          <button class="smallbtn" data-act="renameSet" data-id="${s.id}">Rename</button>
-        </div>
-      `;
-      setList.appendChild(div);
-    }
+    return;
+  }
+  for(const s of cls.sets){
+    const isSel = s.id === state.selectedSetId;
+    const due = s.cards.filter(cd => (cd.due||0) <= now()).length;
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="flex:1">
+        <div class="item-title">${escapeHtml(s.name)} ${isSel ? "📌" : ""}</div>
+        <div class="item-meta">${s.cards.length} card(s) • ${due} due</div>
+      </div>
+      <div class="item-actions">
+        <button class="smallbtn btn-sage" data-act="selectSet" data-id="${s.id}">Open</button>
+        <button class="smallbtn" data-act="renameSet" data-id="${s.id}">Rename</button>
+      </div>
+    `;
+    setList.appendChild(div);
   }
 }
 
@@ -860,14 +869,13 @@ function renderReview(){
   meta.textContent = `Due • Reps: ${next.card.repetitions ?? 0} • Ease: ${(next.card.easeFactor ?? 2.5).toFixed(2)} • Lapses: ${next.card.lapses ?? 0}`;
   front.textContent = next.card.front;
   back.textContent = next.card.back || "(No back text — edit the card to add an answer.)";
-  schedInfo.textContent = `Next due currently: ${fmtDate(next.card.due)} • From: ${getClassName(next.classId)} → ${getSetName(next.classId, next.setId)}`;
+  schedInfo.textContent = `Next due: ${fmtDate(next.card.due)} • From: ${getClassName(next.classId)} → ${getSetName(next.classId, next.setId)}`;
 }
 
 function renderTodos(){
   const cls = getSelectedClass();
   const list = $("todoList");
   list.innerHTML = "";
-
   if(!cls){
     list.innerHTML = `<div class="item"><div class="item-meta">Select a class to use Todo.</div></div>`;
     return;
@@ -876,7 +884,6 @@ function renderTodos(){
     list.innerHTML = `<div class="item"><div class="item-meta">No tasks yet. Add one above ✨</div></div>`;
     return;
   }
-
   const sorted = [...cls.todos].sort((a,b)=> (a.done - b.done) || (b.createdAt - a.createdAt));
   for(const t of sorted){
     const div = document.createElement("div");
@@ -904,26 +911,7 @@ function renderAll(){
   renderTodos();
 }
 
-/* ---------- Utilities ---------- */
-function getClassName(id){
-  const c = state.classes.find(x=>x.id===id);
-  return c ? c.name : "Unknown Class";
-}
-function getSetName(classId, setId){
-  const c = state.classes.find(x=>x.id===classId);
-  const s = c?.sets.find(x=>x.id===setId);
-  return s ? s.name : "Unknown Set";
-}
-function escapeHtml(str){
-  return (str ?? "").toString()
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
-/* ---------- Events: Tabs ---------- */
+/* ---------- Tabs ---------- */
 $("tabFlash").onclick = () => {
   $("tabFlash").classList.add("active");
   $("tabTodo").classList.remove("active");
@@ -937,7 +925,7 @@ $("tabTodo").onclick = () => {
   $("viewFlash").classList.add("hidden");
 };
 
-/* ---------- Events: Classes ---------- */
+/* ---------- Classes ---------- */
 $("btnAddClass").onclick = () => {
   const name = $("className").value.trim();
   if(!name) return;
@@ -983,16 +971,14 @@ $("classList").addEventListener("click", (e)=>{
     const ok = confirm(`Delete class "${cls.name}" and ALL its sets/cards/todos?`);
     if(!ok) return;
     state.classes = state.classes.filter(c=>c.id!==id);
-    if(state.selectedClassId === id){
-      state.selectedClassId = state.classes[0]?.id || null;
-      state.selectedSetId = state.classes[0]?.sets[0]?.id || null;
-    }
+    state.selectedClassId = state.classes[0]?.id || null;
+    state.selectedSetId = state.classes[0]?.sets[0]?.id || null;
     renderAll();
     return;
   }
 });
 
-/* ---------- Events: Sets ---------- */
+/* ---------- Sets ---------- */
 $("btnAddSet").onclick = () => {
   const cls = getSelectedClass();
   if(!cls) return;
@@ -1041,7 +1027,7 @@ $("btnDeleteSet").onclick = () => {
   renderAll();
 };
 
-/* ---------- Events: Flashcards ---------- */
+/* ---------- Flashcards ---------- */
 $("btnGenerate").onclick = () => {
   const cls = getSelectedClass();
   const set = getSelectedSet();
@@ -1051,7 +1037,7 @@ $("btnGenerate").onclick = () => {
     return;
   }
   if(!text){
-    $("genInfo").textContent = "Paste notes first.";
+    $("genInfo").textContent = "Paste or upload notes first.";
     return;
   }
   const made = parseNotes(text);
@@ -1119,7 +1105,7 @@ $("cardList").addEventListener("click", (e)=>{
 
 $("reviewScope").onchange = () => renderAll();
 
-/* ---------- Review buttons ---------- */
+/* ---------- Review ---------- */
 $("btnShow").onclick = () => {
   if(!currentReview) return;
   $("reviewBack").classList.remove("hidden");
@@ -1127,12 +1113,7 @@ $("btnShow").onclick = () => {
   $("btnShow").classList.add("hidden");
   $("btnNext").classList.remove("hidden");
 };
-
-$("btnNext").onclick = () => {
-  // Skip grading, just advance
-  renderReview();
-};
-
+$("btnNext").onclick = () => { renderReview(); };
 $("gradeRow").addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-grade]");
   if(!btn || !currentReview) return;
@@ -1157,7 +1138,6 @@ $("btnAddTodo").onclick = () => {
   $("todoText").value = "";
   renderAll();
 };
-
 $("todoList").addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-act]");
   if(!btn) return;
@@ -1179,7 +1159,6 @@ $("todoList").addEventListener("click", (e)=>{
     return;
   }
 });
-
 $("btnClearDone").onclick = () => {
   const cls = getSelectedClass();
   if(!cls) return;
@@ -1199,9 +1178,7 @@ $("btnExport").onclick = () => {
   a.remove();
   URL.revokeObjectURL(url);
 };
-
 $("btnImport").onclick = () => $("fileInput").click();
-
 $("fileInput").addEventListener("change", async (e)=>{
   const file = e.target.files?.[0];
   if(!file) return;
@@ -1209,39 +1186,172 @@ $("fileInput").addEventListener("change", async (e)=>{
     const text = await file.text();
     const incoming = JSON.parse(text);
     if(!incoming || !Array.isArray(incoming.classes)) throw new Error("Invalid export format.");
-
-    // Normalize incoming a bit
-    const norm = {
-      version: 2,
-      classes: incoming.classes.map(c => ({
-        id: c.id || uid(),
-        name: (c.name || "Untitled Class").toString(),
-        createdAt: c.createdAt || now(),
-        sets: Array.isArray(c.sets) ? c.sets.map(s => ({
-          id: s.id || uid(),
-          name: (s.name || "Untitled Set").toString(),
-          createdAt: s.createdAt || now(),
-          cards: Array.isArray(s.cards) ? s.cards.map(normalizeCard) : []
-        })) : [],
-        todos: Array.isArray(c.todos) ? c.todos.map(t => ({
-          id: t.id || uid(),
-          text: (t.text || "").toString(),
-          done: !!t.done,
-          createdAt: t.createdAt || now()
-        })) : []
-      })),
-      selectedClassId: incoming.selectedClassId || null,
-      selectedSetId: incoming.selectedSetId || null
-    };
-
-    // Replace current state
-    state = norm;
+    state = incoming;
     ensureSelectionValid();
     saveState(state);
     alert("Imported successfully 🌱");
     renderAll();
   }catch(err){
     alert("Import failed: " + (err?.message || err));
+  }finally{
+    e.target.value = "";
+  }
+});
+
+/* =========================================================
+   NOTES UPLOAD (Image OCR / PDF / DOCX / TXT)
+   ========================================================= */
+function setProgress(pct){
+  const bar = $("progBar");
+  bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+function setStatus(msg){
+  $("extractStatus").textContent = msg;
+}
+function injectExtractedText(text){
+  const mode = $("extractMode").value;
+  if(mode === "append"){
+    $("notes").value = ($("notes").value.trim() ? ($("notes").value + "\n") : "") + text;
+  } else {
+    $("notes").value = text;
+  }
+}
+
+$("btnClearExtract").onclick = () => {
+  setProgress(0);
+  setStatus("No upload yet.");
+};
+
+$("btnUploadImage").onclick = () => $("imgInput").click();
+$("btnUploadPDF").onclick = () => $("pdfInput").click();
+$("btnUploadDoc").onclick = () => $("docInput").click();
+
+/* --- Image OCR --- */
+$("imgInput").addEventListener("change", async (e)=>{
+  const files = Array.from(e.target.files || []);
+  if(!files.length) return;
+
+  try{
+    if(!window.Tesseract) throw new Error("Tesseract.js failed to load (check your internet/CDN).");
+
+    setProgress(1);
+    setStatus(`Starting OCR for ${files.length} image(s)...`);
+
+    let allText = [];
+    for(let i=0; i<files.length; i++){
+      const f = files[i];
+      setStatus(`OCR ${i+1}/${files.length}: ${f.name}`);
+      const result = await Tesseract.recognize(f, "eng", {
+        logger: m => {
+          if(m.status && typeof m.progress === "number"){
+            // map per-image progress into overall
+            const per = m.progress; // 0..1
+            const overall = ((i + per) / files.length) * 100;
+            setProgress(overall);
+            setStatus(`OCR ${i+1}/${files.length}: ${m.status} (${Math.round(per*100)}%)`);
+          }
+        }
+      });
+      allText.push(result.data.text.trim());
+    }
+
+    const text = allText.filter(Boolean).join("\n\n");
+    if(!text.trim()){
+      setStatus("OCR finished, but no text was detected. Try a clearer photo (less glare, higher contrast).");
+      setProgress(0);
+    } else {
+      injectExtractedText(text);
+      setStatus(`OCR done ✅ Extracted ${text.length.toLocaleString()} characters.`);
+      setProgress(100);
+    }
+  }catch(err){
+    setStatus("OCR error: " + (err?.message || err));
+    setProgress(0);
+  }finally{
+    e.target.value = "";
+  }
+});
+
+/* --- PDF text extraction --- */
+async function extractTextFromPDF(file){
+  if(!window.pdfjsLib) throw new Error("pdf.js failed to load (check your internet/CDN).");
+  // pdf.js worker config (needed on some setups)
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+  }catch{}
+
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  let text = [];
+
+  for(let p=1; p<=pdf.numPages; p++){
+    setProgress(Math.round((p-1)/pdf.numPages * 100));
+    setStatus(`Reading PDF page ${p}/${pdf.numPages}...`);
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const strings = content.items.map(it => it.str).filter(Boolean);
+    text.push(strings.join(" "));
+  }
+  setProgress(100);
+  return text.join("\n\n");
+}
+
+$("pdfInput").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  try{
+    setProgress(1);
+    setStatus(`Loading PDF: ${file.name}...`);
+    const text = await extractTextFromPDF(file);
+    if(!text.trim()){
+      setStatus("PDF read finished, but no text was extracted (it might be scanned images). Try Upload Image → OCR instead.");
+      setProgress(0);
+    } else {
+      injectExtractedText(text);
+      setStatus(`PDF done ✅ Extracted ${text.length.toLocaleString()} characters.`);
+      setProgress(100);
+    }
+  }catch(err){
+    setStatus("PDF error: " + (err?.message || err));
+    setProgress(0);
+  }finally{
+    e.target.value = "";
+  }
+});
+
+/* --- DOCX / TXT / MD --- */
+$("docInput").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  try{
+    setProgress(1);
+    setStatus(`Loading file: ${file.name}...`);
+
+    const name = file.name.toLowerCase();
+    let text = "";
+
+    if(name.endsWith(".docx")){
+      if(!window.mammoth) throw new Error("Mammoth.js failed to load (check your internet/CDN).");
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      text = result.value || "";
+    } else {
+      // txt/md
+      text = await file.text();
+    }
+
+    if(!text.trim()){
+      setStatus("File loaded but text was empty.");
+      setProgress(0);
+    } else {
+      injectExtractedText(text);
+      setStatus(`File done ✅ Loaded ${text.length.toLocaleString()} characters.`);
+      setProgress(100);
+    }
+  }catch(err){
+    setStatus("File error: " + (err?.message || err));
+    setProgress(0);
   }finally{
     e.target.value = "";
   }
