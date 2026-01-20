@@ -1,0 +1,1255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Matcha Study Studio — Flashcards + Todo</title>
+  <style>
+    :root{
+      --bg1:#f3fbf4;
+      --bg2:#e7f6ea;
+      --panel:#ffffffcc;
+      --panel2:#ffffffef;
+      --stroke:#cfe6d4;
+      --text:#163025;
+      --muted:#4b6b5c;
+      --matcha:#7fbf8d;
+      --sage:#98c6a5;
+      --mint:#bfe6c8;
+      --cream:#fff7e6;
+      --shadow: 0 18px 55px rgba(16,48,37,.12);
+      --shadow2: 0 10px 30px rgba(16,48,37,.10);
+      --radius: 18px;
+      --radius2: 22px;
+      --danger:#ff6b6b;
+      --warn:#f6c34c;
+      --good:#37c98a;
+      --easy:#7a6cff;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *{ box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body{
+      margin:0;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 15% 10%, #dff5e4, transparent 60%),
+        radial-gradient(900px 500px at 90% 25%, #d4f0dc, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* Cute background dots */
+    body:before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.35;
+      background-image:
+        radial-gradient(circle at 20px 20px, rgba(127,191,141,.28) 2px, transparent 2.2px),
+        radial-gradient(circle at 70px 80px, rgba(152,198,165,.22) 2px, transparent 2.2px),
+        radial-gradient(circle at 120px 35px, rgba(191,230,200,.22) 2px, transparent 2.2px);
+      background-size:140px 140px;
+      filter: blur(.2px);
+    }
+
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+      border-bottom:1px solid rgba(207,230,212,.8);
+    }
+    .topbar{
+      max-width:1200px; margin:0 auto; padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand h1{ margin:0; font-size:15px; letter-spacing:.2px; }
+    .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+    .right-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+
+    .wrap{
+      max-width:1200px; margin:0 auto; padding:16px 16px 40px;
+      display:grid; gap:14px;
+      grid-template-columns: 320px 1fr;
+    }
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius2);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .panel:after{
+      content:"";
+      position:absolute; inset:-120px -120px auto auto;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle at 30% 30%, rgba(127,191,141,.35), transparent 60%);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
+
+    .panel h2{ margin:0 0 10px; font-size:14px; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .tiny{ color:var(--muted); font-size:11px; }
+    .mono{ font-family: var(--mono); }
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .col{ display:flex; flex-direction:column; gap:10px; }
+
+    input[type="text"], textarea, select{
+      width:100%;
+      border-radius: 14px;
+      border:1px solid rgba(207,230,212,.95);
+      background: rgba(255,255,255,.85);
+      padding: 10px 12px;
+      outline:none;
+      box-shadow: 0 1px 0 rgba(16,48,37,.03) inset;
+      color:var(--text);
+    }
+    textarea{ min-height:160px; resize:vertical; line-height:1.35; }
+
+    button{
+      border-radius: 14px;
+      border: 1px solid rgba(207,230,212,.95);
+      background: rgba(255,255,255,.85);
+      padding: 10px 12px;
+      cursor:pointer;
+      transition: transform .03s ease, filter .2s ease, background .2s ease;
+      box-shadow: var(--shadow2);
+      color:var(--text);
+    }
+    button:hover{ filter: brightness(1.02); }
+    button:active{ transform: translateY(1px); }
+    .btn-matcha{
+      background: linear-gradient(180deg, rgba(127,191,141,.35), rgba(127,191,141,.18));
+      border-color: rgba(127,191,141,.65);
+    }
+    .btn-sage{
+      background: linear-gradient(180deg, rgba(152,198,165,.35), rgba(152,198,165,.18));
+      border-color: rgba(152,198,165,.65);
+    }
+    .btn-danger{
+      background: linear-gradient(180deg, rgba(255,107,107,.28), rgba(255,107,107,.12));
+      border-color: rgba(255,107,107,.55);
+    }
+
+    .tabs{
+      display:flex; gap:8px; flex-wrap:wrap;
+      padding:6px; border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.65);
+      width: fit-content;
+    }
+    .tab{
+      padding:8px 12px; border-radius: 999px; border:1px solid transparent;
+      background: transparent; box-shadow:none;
+      font-size:12px; color:var(--muted);
+    }
+    .tab.active{
+      background: rgba(127,191,141,.25);
+      border-color: rgba(127,191,141,.45);
+      color: var(--text);
+    }
+
+    .list{
+      border:1px solid var(--stroke);
+      border-radius: 16px;
+      overflow:auto;
+      background: rgba(255,255,255,.78);
+      max-height: 320px;
+    }
+    .item{
+      padding:10px;
+      border-bottom:1px solid rgba(207,230,212,.7);
+      display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    }
+    .item:last-child{ border-bottom:none; }
+    .item-title{ font-size:13px; }
+    .item-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
+    .item-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .smallbtn{ padding:7px 10px; border-radius: 12px; font-size:12px; box-shadow:none; }
+
+    .pill{
+      display:inline-flex; gap:6px; align-items:center;
+      padding:6px 10px; border-radius: 999px;
+      border:1px solid rgba(207,230,212,.9);
+      background: rgba(255,255,255,.7);
+      font-size:12px; color:var(--muted);
+    }
+
+    .kpi{
+      display:grid; gap:10px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    @media (max-width: 520px){ .kpi{ grid-template-columns: 1fr; } }
+    .kpi .box{
+      border:1px solid var(--stroke);
+      border-radius: 18px;
+      background: rgba(255,255,255,.8);
+      padding:10px;
+    }
+    .kpi .val{ font-size:18px; }
+    .kpi .lbl{ font-size:12px; color:var(--muted); }
+
+    .hr{ height:1px; background: rgba(207,230,212,.8); margin: 12px 0; }
+
+    .card{
+      border:1px solid var(--stroke);
+      border-radius: 22px;
+      background:
+        radial-gradient(900px 300px at 20% 0%, rgba(127,191,141,.22), transparent),
+        rgba(255,255,255,.82);
+      box-shadow: var(--shadow2);
+      padding: 14px;
+      min-height: 180px;
+      display:flex; flex-direction:column; justify-content:space-between; gap:12px;
+      position:relative; overflow:hidden;
+    }
+    .card:before{
+      content:"";
+      position:absolute; left:-30px; bottom:-50px;
+      width:160px; height:160px;
+      background: radial-gradient(circle at 35% 35%, rgba(191,230,200,.65), transparent 60%);
+      transform: rotate(-12deg);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .q{ font-size:15px; }
+    .a{ font-size:14px; white-space:pre-wrap; }
+    .hidden{ display:none !important; }
+
+    .choices button{ flex:1; min-width: 108px; }
+    .again { background: rgba(255,107,107,.18); border-color: rgba(255,107,107,.45); }
+    .hard  { background: rgba(246,195,76,.22); border-color: rgba(246,195,76,.5); }
+    .good  { background: rgba(55,201,138,.18); border-color: rgba(55,201,138,.45); }
+    .easy  { background: rgba(122,108,255,.16); border-color: rgba(122,108,255,.4); }
+
+    /* Sidebar cute mascot */
+    .mascot{
+      display:flex; gap:10px; align-items:center;
+      border-radius: 18px;
+      border:1px dashed rgba(127,191,141,.55);
+      background: rgba(255,255,255,.6);
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .mascot svg{ width:52px; height:52px; flex:0 0 auto; }
+    .mascot .txt{ font-size:12px; color:var(--muted); }
+    .mascot .txt b{ color:var(--text); }
+    .corner{
+      display:inline-block;
+      padding:2px 8px;
+      background: rgba(255,247,230,.9);
+      border:1px solid rgba(207,230,212,.9);
+      border-radius: 999px;
+      font-size:11px;
+      color:var(--muted);
+      margin-left:6px;
+    }
+
+    .two{ display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 720px){ .two{ grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <!-- simple “matcha blob” icon -->
+      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#bfe6c8"/>
+            <stop offset="1" stop-color="#7fbf8d"/>
+          </linearGradient>
+        </defs>
+        <path d="M18 16c7-10 28-10 34 4s-3 35-20 38S7 42 10 30s3-10 8-14Z" fill="url(#g)" stroke="#cfe6d4" stroke-width="2" />
+        <circle cx="26" cy="30" r="2.2" fill="#163025"/>
+        <circle cx="36" cy="30" r="2.2" fill="#163025"/>
+        <path d="M28 36c3 3 7 3 10 0" stroke="#163025" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Matcha Study Studio <span class="corner">cozy mode</span></h1>
+        <div class="sub">Classes → Sets → Flashcards + Todo (saved locally)</div>
+      </div>
+    </div>
+
+    <div class="right-actions">
+      <div class="tabs" role="tablist">
+        <button class="tab active" id="tabFlash" type="button">Flashcards</button>
+        <button class="tab" id="tabTodo" type="button">Todo</button>
+      </div>
+      <button class="smallbtn btn-sage" id="btnExport">Export</button>
+      <button class="smallbtn btn-sage" id="btnImport">Import</button>
+      <input class="hidden" id="fileInput" type="file" accept="application/json"/>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Sidebar: Classes & Sets -->
+  <aside class="panel">
+    <div class="mascot">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M14 22c7-9 29-10 36 3s-1 34-20 36S6 44 10 31s1-5 4-9Z" fill="#fff7e6" stroke="#cfe6d4" stroke-width="2"/>
+        <circle cx="26" cy="32" r="2.2" fill="#163025"/>
+        <circle cx="38" cy="32" r="2.2" fill="#163025"/>
+        <path d="M29 39c3 2 6 2 9 0" stroke="#163025" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M18 25c4-6 15-8 25-4" stroke="#7fbf8d" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div class="txt">
+        <b>Tip:</b> Make a class folder (ex: “Honors Physics II”), then create sets (ex: “Ch 21 – Gauss’s Law”).
+      </div>
+    </div>
+
+    <h2>Classes</h2>
+    <div class="row">
+      <input type="text" id="className" placeholder="New class name (ex: Astronomy)" />
+      <button class="btn-matcha" id="btnAddClass">Add</button>
+    </div>
+    <div style="height:10px"></div>
+    <div class="list" id="classList"></div>
+
+    <div class="hr"></div>
+
+    <h2>Sets in selected class</h2>
+    <div class="row">
+      <input type="text" id="setName" placeholder="New set name (ex: Exam 1)" />
+      <button class="btn-matcha" id="btnAddSet">Add</button>
+    </div>
+    <div style="height:10px"></div>
+    <div class="list" id="setList"></div>
+
+    <div class="hr"></div>
+
+    <div class="row">
+      <span class="pill" id="selectedInfo">No class selected</span>
+    </div>
+  </aside>
+
+  <!-- Main: Flashcards -->
+  <main class="panel" id="viewFlash">
+    <div class="row" style="justify-content:space-between; gap:12px">
+      <div>
+        <h2 style="margin-bottom:4px">Flashcards</h2>
+        <div class="muted">Create cards inside a set, then review with spaced repetition.</div>
+      </div>
+      <div class="row">
+        <span class="pill">Review scope</span>
+        <select id="reviewScope">
+          <option value="set">This set</option>
+          <option value="class">This class</option>
+          <option value="all">All classes</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div class="kpi">
+      <div class="box">
+        <div class="val" id="kpiDue">0</div>
+        <div class="lbl">Due now (scope)</div>
+      </div>
+      <div class="box">
+        <div class="val" id="kpiTotal">0</div>
+        <div class="lbl">Total cards (scope)</div>
+      </div>
+      <div class="box">
+        <div class="val" id="kpiNew">0</div>
+        <div class="lbl">New (scope)</div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="two">
+      <section>
+        <h2>Create cards from notes</h2>
+        <div class="muted">
+          One card per line using:
+          <span class="pill mono">Q :: A</span>
+          <span class="pill mono">Term - Def</span>
+          <span class="pill mono">Front | Back</span>
+        </div>
+        <div style="height:8px"></div>
+        <textarea id="notes" placeholder="Example:
+What is Newton's 2nd law? :: F = m a
+Mitochondria - Powerhouse of the cell
+Derivative | Instantaneous rate of change"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn-matcha" id="btnGenerate">Generate into selected set</button>
+          <button id="btnClearNotes">Clear</button>
+          <span class="muted" id="genInfo"></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Add a single card</h2>
+        <div class="col">
+          <input type="text" id="front" placeholder="Front (question / prompt)" />
+          <input type="text" id="back" placeholder="Back (answer)" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn-matcha" id="btnAddOne">Add to selected set</button>
+          <button class="btn-danger" id="btnDeleteSet">Delete selected set</button>
+          <span class="muted" id="saveInfo"></span>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Cards in selected set</h2>
+        <div class="muted">Edit / Delete individual cards.</div>
+        <div style="height:8px"></div>
+        <div class="list" id="cardList"></div>
+      </section>
+
+      <section>
+        <h2>Review</h2>
+        <div class="card" id="reviewCard">
+          <div>
+            <div class="tiny" id="reviewMeta">Pick a class + set to start.</div>
+            <div style="height:8px"></div>
+            <div class="q" id="reviewFront">Your next due card will appear here.</div>
+            <div class="a hidden" id="reviewBack"></div>
+          </div>
+
+          <div>
+            <div class="row">
+              <button id="btnShow">Show Answer</button>
+              <button id="btnNext" class="hidden">Next Due</button>
+            </div>
+            <div class="row choices hidden" id="gradeRow" style="margin-top:10px">
+              <button class="again" data-grade="again">Again</button>
+              <button class="hard"  data-grade="hard">Hard</button>
+              <button class="good"  data-grade="good">Good</button>
+              <button class="easy"  data-grade="easy">Easy</button>
+            </div>
+            <div class="tiny" style="margin-top:10px" id="schedInfo"></div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <h2>Spaced repetition</h2>
+        <div class="muted">
+          Uses SM-2 (Anki-style). If you miss, it comes back sooner; if you’re solid, it stretches the interval.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Main: Todo -->
+  <main class="panel hidden" id="viewTodo">
+    <div class="row" style="justify-content:space-between; gap:12px">
+      <div>
+        <h2 style="margin-bottom:4px">Todo</h2>
+        <div class="muted">Todo list is saved per class folder.</div>
+      </div>
+      <div class="row">
+        <span class="pill">Current class</span>
+        <span class="pill" id="todoClassName">None</span>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row">
+      <input type="text" id="todoText" placeholder="Add a task (ex: Finish HW 3, study Ch 22)" />
+      <button class="btn-matcha" id="btnAddTodo">Add Task</button>
+      <button class="btn-danger" id="btnClearDone">Clear Done</button>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="list" id="todoList"></div>
+
+    <div class="hr"></div>
+
+    <div class="muted">
+      Optional workflow: Put “Study set: ___” tasks here, then knock them out using the Review panel.
+    </div>
+  </main>
+</div>
+
+<script>
+/* -----------------------------
+   Data model:
+   state = {
+     version: 2,
+     classes: [
+       { id, name, createdAt,
+         sets: [ { id, name, createdAt, cards:[Card...] } ],
+         todos: [ { id, text, done, createdAt } ]
+       }
+     ],
+     selectedClassId,
+     selectedSetId
+   }
+
+   Card:
+   { id, front, back, createdAt, updatedAt, due, intervalDays, repetitions, easeFactor, lapses }
+-------------------------------- */
+
+const STORAGE_KEY = "matcha_study_studio_v2";
+const LEGACY_KEY = "sr_flashcards_v1"; // from your earlier version, if present
+
+const $ = (id)=>document.getElementById(id);
+const now = ()=>Date.now();
+const dayMs = (d=1)=>d*24*60*60*1000;
+
+function uid(){
+  return Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
+}
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+}
+
+function defaultState(){
+  const t = now();
+  const firstClassId = uid();
+  const firstSetId = uid();
+  return {
+    version: 2,
+    classes: [{
+      id: firstClassId,
+      name: "My First Class",
+      createdAt: t,
+      sets: [{
+        id: firstSetId,
+        name: "Starter Set",
+        createdAt: t,
+        cards: []
+      }],
+      todos: []
+    }],
+    selectedClassId: firstClassId,
+    selectedSetId: firstSetId
+  };
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const st = JSON.parse(raw);
+      if(st && Array.isArray(st.classes)) return st;
+    }
+
+    // Migrate legacy flat cards into a default class/set if found
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if(legacy){
+      const legacyCards = JSON.parse(legacy);
+      const st = defaultState();
+      if(Array.isArray(legacyCards) && legacyCards.length){
+        st.classes[0].sets[0].cards = legacyCards.map(c => normalizeCard(c));
+      }
+      saveState(st);
+      return st;
+    }
+
+    const st = defaultState();
+    saveState(st);
+    return st;
+  }catch{
+    const st = defaultState();
+    saveState(st);
+    return st;
+  }
+}
+
+function saveState(st){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+}
+
+function normalizeCard(c){
+  const t = now();
+  return {
+    id: c.id || uid(),
+    front: typeof c.front === "string" ? c.front : "",
+    back: typeof c.back === "string" ? c.back : "",
+    createdAt: c.createdAt || t,
+    updatedAt: c.updatedAt || t,
+    due: c.due || t,
+    intervalDays: Number.isFinite(c.intervalDays) ? c.intervalDays : 0,
+    repetitions: Number.isFinite(c.repetitions) ? c.repetitions : 0,
+    easeFactor: Number.isFinite(c.easeFactor) ? c.easeFactor : 2.5,
+    lapses: Number.isFinite(c.lapses) ? c.lapses : 0
+  };
+}
+
+let state = loadState();
+let currentReview = null; // { classId, setId, cardId }
+
+/* ---------- Helpers to get selected class/set ---------- */
+function getSelectedClass(){
+  return state.classes.find(c => c.id === state.selectedClassId) || null;
+}
+function getSelectedSet(){
+  const cls = getSelectedClass();
+  if(!cls) return null;
+  return cls.sets.find(s => s.id === state.selectedSetId) || null;
+}
+function ensureSelectionValid(){
+  if(!state.classes.length){
+    state = defaultState();
+    saveState(state);
+    return;
+  }
+  const cls = getSelectedClass();
+  if(!cls){
+    state.selectedClassId = state.classes[0].id;
+  }
+  const cls2 = getSelectedClass();
+  if(!cls2.sets.length){
+    const t = now();
+    const sid = uid();
+    cls2.sets.push({ id:sid, name:"New Set", createdAt:t, cards:[] });
+    state.selectedSetId = sid;
+  }
+  const set = getSelectedSet();
+  if(!set){
+    state.selectedSetId = cls2.sets[0].id;
+  }
+}
+
+/* ---------- Notes parsing ---------- */
+function makeCard(front, back){
+  const t = now();
+  return {
+    id: uid(),
+    front: front,
+    back: back ?? "",
+    createdAt: t,
+    updatedAt: t,
+    due: t,
+    intervalDays: 0,
+    repetitions: 0,
+    easeFactor: 2.5,
+    lapses: 0
+  };
+}
+function parseNotes(text){
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const made = [];
+  for(const line of lines){
+    const cleaned = line.replace(/^[•\-\*]\s+/, "").trim();
+    let front="", back="";
+    if(cleaned.includes("::")) [front, back] = cleaned.split("::").map(s=>s.trim());
+    else if(cleaned.includes("|")) [front, back] = cleaned.split("|").map(s=>s.trim());
+    else if(cleaned.includes("—")) [front, back] = cleaned.split("—").map(s=>s.trim());
+    else if(cleaned.includes(" - ")) [front, back] = cleaned.split(" - ").map(s=>s.trim());
+    else if(cleaned.includes(" – ")) [front, back] = cleaned.split(" – ").map(s=>s.trim());
+    else { front = cleaned; back = ""; }
+    if(front) made.push(makeCard(front, back));
+  }
+  return made;
+}
+
+/* ---------- SM-2 scheduling ---------- */
+function gradeToQuality(grade){
+  switch(grade){
+    case "again": return 1;
+    case "hard": return 3;
+    case "good": return 4;
+    case "easy": return 5;
+    default: return 4;
+  }
+}
+function applySM2(card, grade){
+  const q = gradeToQuality(grade);
+  let ef = card.easeFactor ?? 2.5;
+  let reps = card.repetitions ?? 0;
+  let interval = card.intervalDays ?? 0;
+
+  const diff = (5 - q);
+  ef = ef + (0.1 - diff * (0.08 + diff * 0.02));
+  if(ef < 1.3) ef = 1.3;
+
+  if(q < 3){
+    reps = 0;
+    interval = 1;
+    card.lapses = (card.lapses ?? 0) + 1;
+  } else {
+    reps += 1;
+    if(reps === 1) interval = 1;
+    else if(reps === 2) interval = 6;
+    else interval = Math.round(interval * ef);
+  }
+
+  if(grade === "hard"){
+    interval = Math.max(1, Math.round(interval * 0.8));
+  }
+
+  card.easeFactor = ef;
+  card.repetitions = reps;
+  card.intervalDays = interval;
+  card.due = now() + dayMs(interval);
+  card.updatedAt = now();
+  return card;
+}
+
+/* ---------- Review scope ---------- */
+function getScopedCards(){
+  const scope = $("reviewScope").value;
+  const cls = getSelectedClass();
+  const set = getSelectedSet();
+  if(scope === "all"){
+    return state.classes.flatMap(c => c.sets.flatMap(s => s.cards.map(card => ({ classId:c.id, setId:s.id, card }))));
+  }
+  if(scope === "class"){
+    if(!cls) return [];
+    return cls.sets.flatMap(s => s.cards.map(card => ({ classId:cls.id, setId:s.id, card })));
+  }
+  // set
+  if(!cls || !set) return [];
+  return set.cards.map(card => ({ classId:cls.id, setId:set.id, card }));
+}
+function dueScoped(){
+  const t = now();
+  return getScopedCards()
+    .filter(x => (x.card.due ?? 0) <= t)
+    .sort((a,b)=> (a.card.due||0) - (b.card.due||0));
+}
+function newScopedCount(){
+  return getScopedCards().filter(x => (x.card.repetitions ?? 0) === 0).length;
+}
+
+/* ---------- Rendering ---------- */
+function renderSidebar(){
+  // Selected info
+  const cls = getSelectedClass();
+  const set = getSelectedSet();
+  $("selectedInfo").textContent = cls ? `Selected: ${cls.name}${set ? " → " + set.name : ""}` : "No class selected";
+  $("todoClassName").textContent = cls ? cls.name : "None";
+
+  // Classes list
+  const classList = $("classList");
+  classList.innerHTML = "";
+  if(!state.classes.length){
+    classList.innerHTML = `<div class="item"><div class="item-meta">No classes yet.</div></div>`;
+  } else {
+    for(const c of state.classes){
+      const isSel = c.id === state.selectedClassId;
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div style="flex:1">
+          <div class="item-title">${escapeHtml(c.name)} ${isSel ? "✅" : ""}</div>
+          <div class="item-meta">${c.sets.length} set(s) • ${c.todos.length} todo</div>
+        </div>
+        <div class="item-actions">
+          <button class="smallbtn btn-sage" data-act="select" data-id="${c.id}">Open</button>
+          <button class="smallbtn" data-act="rename" data-id="${c.id}">Rename</button>
+          <button class="smallbtn btn-danger" data-act="delete" data-id="${c.id}">Delete</button>
+        </div>
+      `;
+      classList.appendChild(div);
+    }
+  }
+
+  // Sets list
+  const setList = $("setList");
+  setList.innerHTML = "";
+  if(!cls){
+    setList.innerHTML = `<div class="item"><div class="item-meta">Select a class.</div></div>`;
+  } else if(!cls.sets.length){
+    setList.innerHTML = `<div class="item"><div class="item-meta">No sets yet.</div></div>`;
+  } else {
+    for(const s of cls.sets){
+      const isSel = s.id === state.selectedSetId;
+      const due = s.cards.filter(cd => (cd.due||0) <= now()).length;
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div style="flex:1">
+          <div class="item-title">${escapeHtml(s.name)} ${isSel ? "📌" : ""}</div>
+          <div class="item-meta">${s.cards.length} card(s) • ${due} due</div>
+        </div>
+        <div class="item-actions">
+          <button class="smallbtn btn-sage" data-act="selectSet" data-id="${s.id}">Open</button>
+          <button class="smallbtn" data-act="renameSet" data-id="${s.id}">Rename</button>
+        </div>
+      `;
+      setList.appendChild(div);
+    }
+  }
+}
+
+function renderKPIs(){
+  const scoped = getScopedCards();
+  const due = dueScoped();
+  $("kpiDue").textContent = due.length;
+  $("kpiTotal").textContent = scoped.length;
+  $("kpiNew").textContent = newScopedCount();
+}
+
+function renderCardList(){
+  const set = getSelectedSet();
+  const cls = getSelectedClass();
+  const list = $("cardList");
+  list.innerHTML = "";
+  if(!cls || !set){
+    list.innerHTML = `<div class="item"><div class="item-meta">Select a class + set.</div></div>`;
+    return;
+  }
+  if(!set.cards.length){
+    list.innerHTML = `<div class="item"><div class="item-meta">No cards in this set yet.</div></div>`;
+    return;
+  }
+  const sorted = [...set.cards].sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  for(const c of sorted){
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="flex:1">
+        <div class="item-title">${escapeHtml(c.front)}</div>
+        <div class="item-meta">Due: ${fmtDate(c.due)} • Int: ${c.intervalDays}d • Reps: ${c.repetitions} • EF: ${(c.easeFactor ?? 2.5).toFixed(2)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="smallbtn" data-act="editCard" data-id="${c.id}">Edit</button>
+        <button class="smallbtn btn-danger" data-act="deleteCard" data-id="${c.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+}
+
+function renderReview(){
+  renderKPIs();
+
+  const due = dueScoped();
+  const meta = $("reviewMeta");
+  const front = $("reviewFront");
+  const back = $("reviewBack");
+  const btnShow = $("btnShow");
+  const btnNext = $("btnNext");
+  const gradeRow = $("gradeRow");
+  const schedInfo = $("schedInfo");
+
+  back.classList.add("hidden");
+  gradeRow.classList.add("hidden");
+  btnNext.classList.add("hidden");
+  btnShow.classList.remove("hidden");
+
+  if(!due.length){
+    const any = getScopedCards().length;
+    meta.textContent = any ? "Nothing due right now 🌿" : "No cards yet.";
+    front.textContent = any ? "You’re caught up! Add more cards or change the review scope." : "Pick a class + set and add cards.";
+    back.textContent = "";
+    schedInfo.textContent = "";
+    currentReview = null;
+    return;
+  }
+
+  const next = due[0];
+  currentReview = { classId: next.classId, setId: next.setId, cardId: next.card.id };
+
+  meta.textContent = `Due • Reps: ${next.card.repetitions ?? 0} • Ease: ${(next.card.easeFactor ?? 2.5).toFixed(2)} • Lapses: ${next.card.lapses ?? 0}`;
+  front.textContent = next.card.front;
+  back.textContent = next.card.back || "(No back text — edit the card to add an answer.)";
+  schedInfo.textContent = `Next due currently: ${fmtDate(next.card.due)} • From: ${getClassName(next.classId)} → ${getSetName(next.classId, next.setId)}`;
+}
+
+function renderTodos(){
+  const cls = getSelectedClass();
+  const list = $("todoList");
+  list.innerHTML = "";
+
+  if(!cls){
+    list.innerHTML = `<div class="item"><div class="item-meta">Select a class to use Todo.</div></div>`;
+    return;
+  }
+  if(!cls.todos.length){
+    list.innerHTML = `<div class="item"><div class="item-meta">No tasks yet. Add one above ✨</div></div>`;
+    return;
+  }
+
+  const sorted = [...cls.todos].sort((a,b)=> (a.done - b.done) || (b.createdAt - a.createdAt));
+  for(const t of sorted){
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="flex:1">
+        <div class="item-title">${t.done ? "✅ " : "⬜️ "}${escapeHtml(t.text)}</div>
+        <div class="item-meta">${fmtDate(t.createdAt)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="smallbtn btn-sage" data-act="toggleTodo" data-id="${t.id}">${t.done ? "Undone" : "Done"}</button>
+        <button class="smallbtn btn-danger" data-act="deleteTodo" data-id="${t.id}">Delete</button>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+}
+
+function renderAll(){
+  ensureSelectionValid();
+  saveState(state);
+  renderSidebar();
+  renderCardList();
+  renderReview();
+  renderTodos();
+}
+
+/* ---------- Utilities ---------- */
+function getClassName(id){
+  const c = state.classes.find(x=>x.id===id);
+  return c ? c.name : "Unknown Class";
+}
+function getSetName(classId, setId){
+  const c = state.classes.find(x=>x.id===classId);
+  const s = c?.sets.find(x=>x.id===setId);
+  return s ? s.name : "Unknown Set";
+}
+function escapeHtml(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/* ---------- Events: Tabs ---------- */
+$("tabFlash").onclick = () => {
+  $("tabFlash").classList.add("active");
+  $("tabTodo").classList.remove("active");
+  $("viewFlash").classList.remove("hidden");
+  $("viewTodo").classList.add("hidden");
+};
+$("tabTodo").onclick = () => {
+  $("tabTodo").classList.add("active");
+  $("tabFlash").classList.remove("active");
+  $("viewTodo").classList.remove("hidden");
+  $("viewFlash").classList.add("hidden");
+};
+
+/* ---------- Events: Classes ---------- */
+$("btnAddClass").onclick = () => {
+  const name = $("className").value.trim();
+  if(!name) return;
+  const t = now();
+  const cid = uid();
+  const sid = uid();
+  state.classes.push({
+    id: cid, name, createdAt: t,
+    sets: [{ id: sid, name:"Set 1", createdAt: t, cards: [] }],
+    todos: []
+  });
+  state.selectedClassId = cid;
+  state.selectedSetId = sid;
+  $("className").value = "";
+  renderAll();
+};
+
+$("classList").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+
+  if(act === "select"){
+    state.selectedClassId = id;
+    const cls = getSelectedClass();
+    state.selectedSetId = cls?.sets[0]?.id || null;
+    renderAll();
+    return;
+  }
+  if(act === "rename"){
+    const cls = state.classes.find(c=>c.id===id);
+    if(!cls) return;
+    const next = prompt("Rename class:", cls.name);
+    if(next === null) return;
+    cls.name = next.trim() || cls.name;
+    renderAll();
+    return;
+  }
+  if(act === "delete"){
+    const cls = state.classes.find(c=>c.id===id);
+    if(!cls) return;
+    const ok = confirm(`Delete class "${cls.name}" and ALL its sets/cards/todos?`);
+    if(!ok) return;
+    state.classes = state.classes.filter(c=>c.id!==id);
+    if(state.selectedClassId === id){
+      state.selectedClassId = state.classes[0]?.id || null;
+      state.selectedSetId = state.classes[0]?.sets[0]?.id || null;
+    }
+    renderAll();
+    return;
+  }
+});
+
+/* ---------- Events: Sets ---------- */
+$("btnAddSet").onclick = () => {
+  const cls = getSelectedClass();
+  if(!cls) return;
+  const name = $("setName").value.trim();
+  if(!name) return;
+  const t = now();
+  const sid = uid();
+  cls.sets.push({ id:sid, name, createdAt:t, cards:[] });
+  state.selectedSetId = sid;
+  $("setName").value = "";
+  renderAll();
+};
+
+$("setList").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+  const cls = getSelectedClass();
+  if(!cls) return;
+
+  if(act === "selectSet"){
+    state.selectedSetId = id;
+    renderAll();
+    return;
+  }
+  if(act === "renameSet"){
+    const set = cls.sets.find(s=>s.id===id);
+    if(!set) return;
+    const next = prompt("Rename set:", set.name);
+    if(next === null) return;
+    set.name = next.trim() || set.name;
+    renderAll();
+    return;
+  }
+});
+
+$("btnDeleteSet").onclick = () => {
+  const cls = getSelectedClass();
+  const set = getSelectedSet();
+  if(!cls || !set) return;
+  const ok = confirm(`Delete set "${set.name}" and all cards in it?`);
+  if(!ok) return;
+  cls.sets = cls.sets.filter(s=>s.id!==set.id);
+  state.selectedSetId = cls.sets[0]?.id || null;
+  renderAll();
+};
+
+/* ---------- Events: Flashcards ---------- */
+$("btnGenerate").onclick = () => {
+  const cls = getSelectedClass();
+  const set = getSelectedSet();
+  const text = $("notes").value.trim();
+  if(!cls || !set){
+    $("genInfo").textContent = "Select a class + set first.";
+    return;
+  }
+  if(!text){
+    $("genInfo").textContent = "Paste notes first.";
+    return;
+  }
+  const made = parseNotes(text);
+  if(!made.length){
+    $("genInfo").textContent = "No valid lines found.";
+    return;
+  }
+  set.cards.push(...made.map(normalizeCard));
+  $("genInfo").textContent = `Added ${made.length} card(s) to "${set.name}".`;
+  renderAll();
+};
+
+$("btnClearNotes").onclick = () => {
+  $("notes").value = "";
+  $("genInfo").textContent = "";
+};
+
+$("btnAddOne").onclick = () => {
+  const cls = getSelectedClass();
+  const set = getSelectedSet();
+  const f = $("front").value.trim();
+  const b = $("back").value;
+  if(!cls || !set){
+    $("saveInfo").textContent = "Select a class + set first.";
+    return;
+  }
+  if(!f){
+    $("saveInfo").textContent = "Front is required.";
+    return;
+  }
+  set.cards.push(makeCard(f, b));
+  $("front").value = "";
+  $("back").value = "";
+  $("saveInfo").textContent = "Card added 🌿";
+  renderAll();
+};
+
+$("cardList").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+  const set = getSelectedSet();
+  if(!set) return;
+  const card = set.cards.find(c=>c.id===id);
+  if(!card) return;
+
+  if(act === "deleteCard"){
+    set.cards = set.cards.filter(c=>c.id!==id);
+    renderAll();
+    return;
+  }
+  if(act === "editCard"){
+    const nf = prompt("Edit Front:", card.front);
+    if(nf === null) return;
+    const nb = prompt("Edit Back:", card.back);
+    if(nb === null) return;
+    card.front = nf.trim() || card.front;
+    card.back = nb;
+    card.updatedAt = now();
+    renderAll();
+    return;
+  }
+});
+
+$("reviewScope").onchange = () => renderAll();
+
+/* ---------- Review buttons ---------- */
+$("btnShow").onclick = () => {
+  if(!currentReview) return;
+  $("reviewBack").classList.remove("hidden");
+  $("gradeRow").classList.remove("hidden");
+  $("btnShow").classList.add("hidden");
+  $("btnNext").classList.remove("hidden");
+};
+
+$("btnNext").onclick = () => {
+  // Skip grading, just advance
+  renderReview();
+};
+
+$("gradeRow").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-grade]");
+  if(!btn || !currentReview) return;
+  const grade = btn.dataset.grade;
+
+  const cls = state.classes.find(c=>c.id===currentReview.classId);
+  const set = cls?.sets.find(s=>s.id===currentReview.setId);
+  const card = set?.cards.find(c=>c.id===currentReview.cardId);
+  if(!cls || !set || !card) { currentReview=null; renderAll(); return; }
+
+  applySM2(card, grade);
+  saveState(state);
+  renderAll();
+});
+
+/* ---------- Todo ---------- */
+$("btnAddTodo").onclick = () => {
+  const cls = getSelectedClass();
+  const text = $("todoText").value.trim();
+  if(!cls || !text) return;
+  cls.todos.push({ id: uid(), text, done:false, createdAt: now() });
+  $("todoText").value = "";
+  renderAll();
+};
+
+$("todoList").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-act]");
+  if(!btn) return;
+  const act = btn.dataset.act;
+  const id = btn.dataset.id;
+  const cls = getSelectedClass();
+  if(!cls) return;
+
+  if(act === "toggleTodo"){
+    const t = cls.todos.find(x=>x.id===id);
+    if(!t) return;
+    t.done = !t.done;
+    renderAll();
+    return;
+  }
+  if(act === "deleteTodo"){
+    cls.todos = cls.todos.filter(x=>x.id!==id);
+    renderAll();
+    return;
+  }
+});
+
+$("btnClearDone").onclick = () => {
+  const cls = getSelectedClass();
+  if(!cls) return;
+  cls.todos = cls.todos.filter(t => !t.done);
+  renderAll();
+};
+
+/* ---------- Import/Export ---------- */
+$("btnExport").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "matcha_study_studio_export.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+$("btnImport").onclick = () => $("fileInput").click();
+
+$("fileInput").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const incoming = JSON.parse(text);
+    if(!incoming || !Array.isArray(incoming.classes)) throw new Error("Invalid export format.");
+
+    // Normalize incoming a bit
+    const norm = {
+      version: 2,
+      classes: incoming.classes.map(c => ({
+        id: c.id || uid(),
+        name: (c.name || "Untitled Class").toString(),
+        createdAt: c.createdAt || now(),
+        sets: Array.isArray(c.sets) ? c.sets.map(s => ({
+          id: s.id || uid(),
+          name: (s.name || "Untitled Set").toString(),
+          createdAt: s.createdAt || now(),
+          cards: Array.isArray(s.cards) ? s.cards.map(normalizeCard) : []
+        })) : [],
+        todos: Array.isArray(c.todos) ? c.todos.map(t => ({
+          id: t.id || uid(),
+          text: (t.text || "").toString(),
+          done: !!t.done,
+          createdAt: t.createdAt || now()
+        })) : []
+      })),
+      selectedClassId: incoming.selectedClassId || null,
+      selectedSetId: incoming.selectedSetId || null
+    };
+
+    // Replace current state
+    state = norm;
+    ensureSelectionValid();
+    saveState(state);
+    alert("Imported successfully 🌱");
+    renderAll();
+  }catch(err){
+    alert("Import failed: " + (err?.message || err));
+  }finally{
+    e.target.value = "";
+  }
+});
+
+/* ---------- Start ---------- */
+ensureSelectionValid();
+renderAll();
+</script>
+</body>
+</html>
